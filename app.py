@@ -2,10 +2,10 @@ from flask import Flask, request, render_template, send_file
 import sqlite3
 from datetime import datetime
 import os
+import traceback  # ✅ Add this
 
 app = Flask(__name__)
-
-DB_PATH = 'ChatStorage.sqlite'  # your pre-uploaded iPhone backup file
+DB_PATH = 'ChatStorage.sqlite'
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -13,10 +13,10 @@ def index():
         phone = request.form['phone'].strip()
         jid = phone + '@s.whatsapp.net'
 
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-
         try:
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+
             cur.execute("""
                 SELECT ZISFROMME, ZTEXT, ZMESSAGEDATE
                 FROM ZWAMESSAGE
@@ -41,8 +41,16 @@ def index():
 
             return send_file(html_path, as_attachment=True)
 
+        except Exception as e:
+            print("🔥 Error:", e)
+            traceback.print_exc()  # ✅ Show full traceback
+            return "Internal Server Error", 500
+
         finally:
             conn.close()
+
+    return render_template('index.html')
+
 
     return render_template('index.html')
 if __name__ == '__main__':
