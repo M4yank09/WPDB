@@ -1,16 +1,14 @@
 <!DOCTYPE html>
 <html>
-<head><title>WhatsApp Extractor</title></head>
+<head>
+    <title>Extract WhatsApp Chat</title>
+</head>
 <body>
-  <h2>Upload ChatStorage.sqlite & Extract Chat</h2>
-  <form method="POST" enctype="multipart/form-data">
-    <label>SQLite file (ChatStorage.sqlite):</label><br>
-    <input type="file" name="db_file" required><br><br>
-
-    <label>Phone number (without +91, just digits):</label><br>
-    <input type="text" name="phone" required><br><br>
-
-    <input type="submit" value="Download Chat HTML">
-  </form>
+    <h2>Enter Phone Number to Extract Chat</h2>
+    <form method="POST">
+        <label>Phone number (e.g. 919822596818):</label><br>
+        <input type="text" name="phone" required><br><br>
+        <input type="submit" value="Download Chat">
+    </form>
 </body>
 </html>
