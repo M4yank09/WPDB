@@ -47,3 +47,8 @@ def index():
         return send_file(out_path, as_attachment=True)
 
     return render_template('index.html')
+import os
+
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))  # Render will provide PORT
+    app.run(host='0.0.0.0', port=port)
