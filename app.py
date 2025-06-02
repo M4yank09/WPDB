@@ -1,56 +1,66 @@
-from flask import Flask, request, render_template, send_file
-import sqlite3
-from datetime import datetime
 import os
-import traceback  # ✅ Add this
+import requests
+from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
-DB_PATH = 'ChatStorage.sqlite'
 
-@app.route('/', methods=['GET', 'POST'])
+DB_FILE = "ChatStorage.sqlite"
+DB_URL = "https://drive.google.com/uc?export=download&id=1XkD541CtKuRyJR4sZP8_dklSaRP3ybkI"
+
+def download_db():
+    if not os.path.exists(DB_FILE):
+        print("Downloading database...")
+        r = requests.get(DB_URL)
+        with open(DB_FILE, "wb") as f:
+            f.write(r.content)
+        print("Download complete.")
+
+download_db()
+
+import sqlite3
+
+@app.route("/", methods=["GET", "POST"])
 def index():
-    if request.method == 'POST':
-        phone = request.form['phone'].strip()
-        jid = phone + '@s.whatsapp.net'
+    if request.method == "POST":
+        phone = request.form.get("phone")
+        if not phone:
+            return "Please enter a phone number."
 
-        try:
-            conn = sqlite3.connect(DB_PATH)
-            cur = conn.cursor()
+        conn = sqlite3.connect(DB_FILE)
+        cur = conn.cursor()
 
-            cur.execute("""
-                SELECT ZISFROMME, ZTEXT, ZMESSAGEDATE
-                FROM ZWAMESSAGE
-                WHERE ZTOJID = ? OR ZFROMJID = ?
-                ORDER BY ZMESSAGEDATE ASC
-            """, (jid, jid))
+        # Example query to get messages with this phone number in either sender or receiver
+        query = """
+        SELECT ZMESSAGEDATE, ZISFROMME, ZTEXT
+        FROM ZWAMESSAGE
+        WHERE ZFROMJID LIKE ? OR ZTOJID LIKE ?
+        ORDER BY ZMESSAGEDATE
+        """
+        pattern = f"%{phone}%"
+        cur.execute(query, (pattern, pattern))
+        rows = cur.fetchall()
+        conn.close()
 
-            messages = []
-            for isfromme, text, ts in cur.fetchall():
-                if not text:
-                    continue
-                sender = 'Me' if isfromme else phone
-                try:
-                    date = datetime.utcfromtimestamp(ts + 978307200).strftime('%Y-%m-%d %H:%M:%S')
-                except:
-                    date = 'Unknown'
-                messages.append(f"<p><b>[{date}] {sender}:</b> {text}</p>")
+        # Simple HTML format
+        html = "<h2>Messages with {}</h2><ul>".format(phone)
+        for date, isfromme, text in rows:
+            # Convert Apple timestamp (seconds since 2001-01-01) to readable time
+            import datetime
+            timestamp = datetime.datetime.fromtimestamp(date + 978307200)
+            sender = "Me" if isfromme == 1 else phone
+            html += f"<li>[{timestamp}] <b>{sender}:</b> {text}</li>"
+        html += "</ul>"
+        return html
 
-            html_path = f'{phone}_chat.html'
-            with open(html_path, 'w', encoding='utf-8') as f:
-                f.write("<html><body>" + "\n".join(messages) + "</body></html>")
+    return '''
+        <form method="post">
+            Enter phone number (e.g. 919822596818): <input name="phone" />
+            <input type="submit" value="Get Chats" />
+        </form>
+    '''
 
-            return send_file(html_path, as_attachment=True)
-
-        except Exception as e:
-            print("🔥 Error:", e)
-            traceback.print_exc()  # ✅ Show full traceback
-            return "Internal Server Error", 500
-
-        finally:
-            conn.close()
-
-    return render_template('index.html')
-
+if __name__ == "__main__":
+    app.run(debug=True)
 
     return render_template('index.html')
 if __name__ == '__main__':
